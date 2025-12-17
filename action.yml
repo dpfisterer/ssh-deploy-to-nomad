@@ -172,7 +172,6 @@ runs:
         SSH_HOST: ${{ inputs.ssh-host }}
         SSH_USER: ${{ inputs.ssh-user }}
         WORKSPACE_PATH: ${{ inputs.workspace-path }}
-        NOMAD_ADDR: ${{ inputs.nomad-addr }}
         ACTION: ${{ inputs.action }}
         SERVICE_NAME: ${{ inputs.service-name }}
         ENV_VARS_INPUT: ${{ inputs.env-vars }}
@@ -203,7 +202,7 @@ runs:
         ENV_EXPORTS=$(echo "$ENV_VARS_JSON" | jq -r 'to_entries | map("export \(.key)=\(if (.value | type) == "array" or (.value | type) == "object" then (.value | tojson | @sh) else (.value | @sh) end)") | join(" && ")')
         
         # Execute deployment with service-specific filenames
-        # Use bash and source ~/.bashrc to load pre-configured environment (like NOMAD_ADDR)
+        # Use bash and source ~/.bashrc to load pre-configured environment
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
           ${SSH_USER}@${SSH_HOST} bash << EOF
         [ -f ~/.bashrc ] && source ~/.bashrc
@@ -228,7 +227,6 @@ runs:
       env:
         SSH_HOST: ${{ inputs.ssh-host }}
         SSH_USER: ${{ inputs.ssh-user }}
-        NOMAD_ADDR: ${{ inputs.nomad-addr }}
         SERVICE_NAME: ${{ inputs.service-name }}
       run: |
         echo "🔍 Verifying deployment status..."
