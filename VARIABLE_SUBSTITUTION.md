@@ -54,7 +54,7 @@ In your workflow YAML, provide values as proper HCL literals:
 
 ```yaml
 env-vars: |
-  DATACENTER: '["dc1"]'                    # Array with quoted string
+  DATACENTER: '["dc1"]'                    # Array with quoted string (note single quotes around entire value!)
   SERVICE_IMAGE: ghcr.io/org/service:v1.0  # String (will be auto-quoted)
   SERVICE_COUNT: 3                         # Number (stays unquoted)
   SERVICE_CPU: 100                         # Number
@@ -62,6 +62,9 @@ env-vars: |
   DEBUG_ENABLED: true                      # Boolean (stays unquoted)
   API_KEY: my-secret-key                   # String (will be auto-quoted)
   EMPTY_VALUE: ""                          # Empty string
+  
+  # Multiple datacenter array
+  DATACENTERS: '["dc1", "dc2", "dc3"]'     # Multi-element array
 ```
 
 ### ❌ Common Mistakes

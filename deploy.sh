@@ -55,17 +55,20 @@ format_value() {
     # JSON array or object - validate and format for HCL
     # Must contain properly quoted strings inside arrays
     if [[ "$value" =~ ^\[.*\]$ ]] || [[ "$value" =~ ^\{.*\}$ ]]; then
+        # Unescape any escaped quotes for validation
+        local test_value="${value//\\\"/\"}"
+        
         # Check if it's a valid JSON array/object with quoted strings
-        if echo "$value" | jq empty 2>/dev/null; then
-            # Valid JSON - convert to HCL-compatible format
-            # For arrays, ensure strings are quoted
-            echo "$value"
+        if echo "$test_value" | jq empty 2>/dev/null; then
+            # Valid JSON - return unescaped version
+            echo "$test_value"
+            return
         else
             # Invalid JSON - treat as string
             value="${value//\"/\\\"}"
             echo "\"$value\""
+            return
         fi
-        return
     fi
     
     # String (quoted and escaped)
