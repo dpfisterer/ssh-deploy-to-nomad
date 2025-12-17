@@ -10,6 +10,14 @@ A reusable GitHub Action for deploying Nomad jobs via SSH with automatic environ
 - ✅ Built-in deployment verification
 - 📦 Composite action (no Docker required)
 
+## ⚠️ Important: Variable Configuration
+
+**Before using this action, read [VARIABLE_SUBSTITUTION.md](VARIABLE_SUBSTITUTION.md)** for detailed guidance on:
+- Correct `.vars.hcl` file format
+- Proper YAML/JSON value formatting
+- Common mistakes and how to avoid them
+- Troubleshooting variable substitution errors
+
 ## Usage
 
 ### Basic Example (YAML format - recommended)

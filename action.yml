@@ -61,6 +61,54 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        echo "🔍 Validating required inputs..."
+        
+        MISSING_INPUTS=""
+        
+        if [ -z "${{ inputs.ssh-host }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - ssh-host"
+        fi
+        
+        if [ -z "${{ inputs.ssh-user }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - ssh-user"
+        fi
+        
+        if [ -z "${{ inputs.ssh-key }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - ssh-key"
+        fi
+        
+        if [ -z "${{ inputs.service-name }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - service-name"
+        fi
+        
+        if [ -z "${{ inputs.hcl-template }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - hcl-template"
+        fi
+        
+        if [ -z "${{ inputs.hcl-variables }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - hcl-variables"
+        fi
+        
+        if [ -z "${{ inputs.env-vars }}" ]; then
+          MISSING_INPUTS="${MISSING_INPUTS}\n  - env-vars"
+        fi
+        
+        if [ -n "$MISSING_INPUTS" ]; then
+          echo "❌ ERROR: The following required inputs are missing or empty:"
+          echo -e "$MISSING_INPUTS"
+          echo ""
+          echo "💡 Please ensure all required secrets and variables are configured in your GitHub repository settings:"
+          echo "   - Repository/Organization Variables (Settings → Secrets and variables → Actions → Variables)"
+          echo "   - Repository/Organization Secrets (Settings → Secrets and variables → Actions → Secrets)"
+          echo "   - Environment-specific variables/secrets if using environments"
+          exit 1
+        fi
+        
+        echo "✅ All required inputs are present"
+
     - name: Setup SSH
       shell: bash
       env:

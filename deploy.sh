@@ -34,6 +34,12 @@ fi
 format_value() {
     local value="$1"
     
+    # Empty or null values (return empty string quoted)
+    if [[ -z "$value" ]] || [[ "$value" == "null" ]]; then
+        echo '""'
+        return
+    fi
+    
     # Boolean (unquoted)
     if [[ "$value" =~ ^(true|false)$ ]]; then
         echo "$value"
@@ -46,9 +52,19 @@ format_value() {
         return
     fi
     
-    # JSON array or object (preserve as-is)
+    # JSON array or object - validate and format for HCL
+    # Must contain properly quoted strings inside arrays
     if [[ "$value" =~ ^\[.*\]$ ]] || [[ "$value" =~ ^\{.*\}$ ]]; then
-        echo "$value"
+        # Check if it's a valid JSON array/object with quoted strings
+        if echo "$value" | jq empty 2>/dev/null; then
+            # Valid JSON - convert to HCL-compatible format
+            # For arrays, ensure strings are quoted
+            echo "$value"
+        else
+            # Invalid JSON - treat as string
+            value="${value//\"/\\\"}"
+            echo "\"$value\""
+        fi
         return
     fi
     
@@ -72,16 +88,30 @@ while IFS= read -r line; do
         continue
     fi
     
+    # Detect variable definitions (should not be in vars file)
+    if [[ "$line" =~ ^[[:space:]]*variable[[:space:]]+ ]]; then
+        echo "[ERROR] Variable definitions found in $VARS_FILE!" >&2
+        echo "[ERROR] The vars file should only contain assignments like:" >&2
+        echo "[ERROR]   my_var = [[MY_VAR]]" >&2
+        echo "[ERROR] NOT variable definitions like:" >&2
+        echo "[ERROR]   variable \"my_var\" { ... }" >&2
+        echo "[ERROR] See VARIABLE_SUBSTITUTION.md for correct format." >&2
+        rm -f "$TEMP_FILE"
+        exit 1
+    fi
+    
     processed_line="$line"
     
-    # Find and replace all [[VAR]] patterns
-    while [[ "$processed_line" =~ \[\[([A-Z_][A-Z0-9_]*)\]\] ]]; do
+    # Find and replace all [[VAR]] or [[VAR-WITH-DASHES]] patterns
+    while [[ "$processed_line" =~ \[\[([A-Z_][A-Z0-9_-]*)\]\] ]]; do
         var_name="${BASH_REMATCH[1]}"
-        var_value="${!var_name}"
+        # Convert hyphens to underscores for environment variable lookup
+        env_var_name="${var_name//-/_}"
+        var_value="${!env_var_name}"
         
         if [[ -z "$var_value" ]]; then
-            echo "[WARNING] Variable $var_name is not set - using \"undefined\"" >&2
-            formatted_value="\"undefined\""
+            echo "[WARNING] Variable $var_name (env: $env_var_name) is not set - leaving empty" >&2
+            formatted_value="\"\""
         else
             formatted_value=$(format_value "$var_value")
         fi
@@ -89,8 +119,9 @@ while IFS= read -r line; do
         # Escape special characters for sed
         escaped_value=$(echo "$formatted_value" | sed 's/[\/&]/\\&/g')
         
-        # Replace the placeholder
-        processed_line=$(echo "$processed_line" | sed "s/\[\[${var_name}\]\]/${escaped_value}/g")
+        # Replace the placeholder (escape hyphens in pattern)
+        safe_var_name="${var_name//-/\\-}"
+        processed_line=$(echo "$processed_line" | sed "s/\[\[${safe_var_name}\]\]/${escaped_value}/g")
         
         echo "[INFO] Substituted $var_name = $formatted_value"
     done
