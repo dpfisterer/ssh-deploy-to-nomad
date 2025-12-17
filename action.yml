@@ -175,6 +175,7 @@ runs:
         ACTION: ${{ inputs.action }}
         SERVICE_NAME: ${{ inputs.service-name }}
         ENV_VARS_INPUT: ${{ inputs.env-vars }}
+        NOMAD_ADDR: ${{ inputs.nomad-addr }}
       run: |
         echo "🚀 Performing action: ${ACTION} on service: ${SERVICE_NAME}"
         
@@ -207,6 +208,7 @@ runs:
           ${SSH_USER}@${SSH_HOST} bash << EOF
         [ -f ~/.bashrc ] && source ~/.bashrc
         cd ${WORKSPACE_PATH}
+        export NOMAD_ADDR="${NOMAD_ADDR}"
         ${ENV_EXPORTS}
         bash deploy.sh ${SERVICE_NAME} ${ACTION} ${SAFE_NAME}.template.hcl ${SAFE_NAME}.variables.hcl
         EOF
@@ -228,12 +230,14 @@ runs:
         SSH_HOST: ${{ inputs.ssh-host }}
         SSH_USER: ${{ inputs.ssh-user }}
         SERVICE_NAME: ${{ inputs.service-name }}
+        NOMAD_ADDR: ${{ inputs.nomad-addr }}
       run: |
         echo "🔍 Verifying deployment status..."
         
         STATUS_OUTPUT=$(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
           ${SSH_USER}@${SSH_HOST} bash << EOF
         [ -f ~/.bashrc ] && source ~/.bashrc
+        export NOMAD_ADDR="${NOMAD_ADDR}"
         nomad job status ${SERVICE_NAME}
         EOF
         )

@@ -66,6 +66,13 @@ Supports both formats in `ssh-key` input:
 LS0tLS1CRUdJTi...
 ```
 
+### Nomad Server Connection
+The `nomad-addr` input (default: `http://127.0.0.1:4646`) is exported as `NOMAD_ADDR` environment variable in the SSH session before running Nomad CLI commands. This allows the action to connect to Nomad servers on non-standard addresses:
+```yaml
+with:
+  nomad-addr: http://nomad.internal:4646  # Custom Nomad address
+```
+
 ## Testing Approach
 
 Run tests locally without Nomad server:
