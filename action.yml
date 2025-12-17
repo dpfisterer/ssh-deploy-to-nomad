@@ -203,11 +203,14 @@ runs:
         ENV_EXPORTS=$(echo "$ENV_VARS_JSON" | jq -r 'to_entries | map("export \(.key)=\(if (.value | type) == "array" or (.value | type) == "object" then (.value | tojson | @sh) else (.value | @sh) end)") | join(" && ")')
         
         # Execute deployment with service-specific filenames
+        # Use bash to ensure proper variable expansion and environment passing
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-          ${SSH_USER}@${SSH_HOST} "cd ${WORKSPACE_PATH} && \
-          export NOMAD_ADDR='${NOMAD_ADDR}' && \
-          ${ENV_EXPORTS} && \
-          bash deploy.sh ${SERVICE_NAME} ${ACTION} ${SAFE_NAME}.template.hcl ${SAFE_NAME}.variables.hcl"
+          ${SSH_USER}@${SSH_HOST} bash << EOF
+        cd ${WORKSPACE_PATH}
+        export NOMAD_ADDR='${NOMAD_ADDR}'
+        ${ENV_EXPORTS}
+        bash deploy.sh ${SERVICE_NAME} ${ACTION} ${SAFE_NAME}.template.hcl ${SAFE_NAME}.variables.hcl
+        EOF
         
         if [ $? -eq 0 ]; then
           echo "status=success" >> $GITHUB_OUTPUT
