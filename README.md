@@ -12,11 +12,9 @@ A reusable GitHub Action for deploying Nomad jobs via SSH with automatic environ
 
 ## ⚠️ Important: Variable Configuration
 
-**Before using this action, read [VARIABLE_SUBSTITUTION.md](VARIABLE_SUBSTITUTION.md)** for detailed guidance on:
-- Correct `.vars.hcl` file format
-- Proper YAML/JSON value formatting
-- Common mistakes and how to avoid them
-- Troubleshooting variable substitution errors
+**Before using this action, read these guides:**
+- [VARIABLE_SUBSTITUTION.md](VARIABLE_SUBSTITUTION.md) - Variable file format, YAML/JSON formatting, common mistakes
+- [TEMPLATE_SUBSTITUTION.md](TEMPLATE_SUBSTITUTION.md) - How to use `[[VAR]]` in template files (e.g., dynamic job names)
 
 ## Usage
 
@@ -124,7 +122,20 @@ A reusable GitHub Action for deploying Nomad jobs via SSH with automatic environ
 
 ## Environment Variable Substitution
 
-The action automatically substitutes environment variables in your HCL variable files using the `[[VAR_NAME]]` pattern:
+The action automatically substitutes environment variables using the `[[VAR_NAME]]` pattern in **both template and variable files**:
+
+### Template File (template.nomad.hcl) - NEW!
+```hcl
+job "[[SERVICE_NAME]]" {
+  datacenters = var.datacenters
+  
+  meta {
+    environment = "[[ENVIRONMENT]]"
+    version     = "[[VERSION]]"
+  }
+  # ...
+}
+```
 
 ### Variable File (variables.vars.hcl)
 ```hcl
@@ -137,6 +148,9 @@ service_cpu = 100
 ### GitHub Actions Workflow (YAML format)
 ```yaml
 env-vars: |
+  SERVICE_NAME: my-api-service
+  ENVIRONMENT: production
+  VERSION: 1.2.3
   DATACENTER: dc1
   SERVICE_IMAGE: myapp:latest
   SERVICE_COUNT: 3
@@ -146,6 +160,9 @@ Or JSON format:
 ```yaml
 env-vars: |
   {
+    "SERVICE_NAME": "my-api-service",
+    "ENVIRONMENT": "production",
+    "VERSION": "1.2.3",
     "DATACENTER": "dc1",
     "SERVICE_IMAGE": "myapp:latest",
     "SERVICE_COUNT": "3"
@@ -153,6 +170,20 @@ env-vars: |
 ```
 
 ### Result After Substitution
+
+Template becomes:
+```hcl
+job "my-api-service" {
+  datacenters = var.datacenters
+  
+  meta {
+    environment = "production"
+    version     = "1.2.3"
+  }
+}
+```
+
+Variables file becomes:
 ```hcl
 datacenters = "dc1"
 service_image = "myapp:latest"
@@ -160,7 +191,7 @@ service_count = 3
 service_cpu = 100
 ```
 
-**Note:** Variable names must start with a letter or underscore, followed by letters, numbers, or underscores (`[A-Z_][A-Z0-9_]*`).
+**See [TEMPLATE_SUBSTITUTION.md](TEMPLATE_SUBSTITUTION.md) for more examples and details.**
 
 ## Environment Variable Formats
 

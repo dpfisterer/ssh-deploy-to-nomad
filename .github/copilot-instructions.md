@@ -12,9 +12,10 @@ This is a **composite GitHub Action** that deploys HashiCorp Nomad jobs via SSH 
    - YAML/JSON env-vars parsing and conversion
    
 2. **Remote Phase** (`deploy.sh`): Executes on SSH host
-   - Variable substitution in HCL files (replaces `[[VAR_NAME]]` placeholders)
+   - Variable substitution in BOTH template and variables files (replaces `[[VAR_NAME]]` placeholders)
    - Nomad CLI commands (`run`, `stop`, `restart`, `status`)
-   - Type-aware value formatting (strings quoted, numbers/bools/arrays unquoted)
+   - Type-aware value formatting for variables file (strings quoted, numbers/bools/arrays unquoted)
+   - Raw value substitution for template file (no quoting, used for job names, metadata)
 
 ### File Naming Convention
 Files are prefixed with sanitized service names to enable concurrent deployments:
@@ -25,9 +26,18 @@ Files are prefixed with sanitized service names to enable concurrent deployments
 ## Critical Patterns
 
 ### Variable Substitution Logic (`deploy.sh`)
-- Scans `.vars.hcl` line-by-line for `[[VAR_NAME]]` placeholders (pattern: `\[\[([A-Z_][A-Z0-9_]*)\]\]`)
+- Scans BOTH template and variables files for `[[VAR_NAME]]` placeholders (pattern: `\[\[([A-Z_][A-Z0-9_-]*)\]\]`)
 - Ignores comments and empty lines
-- Type detection determines quoting:
+- **Template file substitution**: Raw values (no quoting) for job names, metadata, etc.
+  ```hcl
+  job "[[SERVICE_NAME]]" {
+    meta {
+      environment = "[[ENVIRONMENT]]"
+    }
+  }
+  # Becomes: job "my-service" { ... environment = "production" ... }
+  ```
+- **Variables file substitution**: Type detection determines quoting
   ```bash
   # Booleans/numbers/JSON: unquoted
   debug_enabled = true
@@ -38,8 +48,8 @@ Files are prefixed with sanitized service names to enable concurrent deployments
   image = "nginx:latest"
   api_key = "secret\"with\"quotes"
   ```
-- Processes file line by line, replacing all `[[VAR]]` patterns on each line
-- Creates temporary file for substitution, cleans up via trap on exit
+- Processes both files line by line, replacing all `[[VAR]]` patterns
+- Creates temporary files for both template and variables, cleans up on exit
 
 ### Dual Format Support (YAML/JSON)
 Action detects format by checking if `env-vars` starts with `{`:
