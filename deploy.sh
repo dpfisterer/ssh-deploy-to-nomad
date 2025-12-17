@@ -53,22 +53,31 @@ format_value() {
     fi
     
     # JSON array or object - validate and format for HCL
-    # Must contain properly quoted strings inside arrays
+    # Arrays/objects should NOT be quoted - they're already valid HCL
     if [[ "$value" =~ ^\[.*\]$ ]] || [[ "$value" =~ ^\{.*\}$ ]]; then
-        # Unescape any escaped quotes for validation
-        local test_value="${value//\\\"/\"}"
+        # Unescape any escaped quotes (from YAML/JSON pipeline)
+        local unescaped_value="${value//\\\"/\"}"
         
-        # Check if it's a valid JSON array/object with quoted strings
-        if echo "$test_value" | jq empty 2>/dev/null; then
-            # Valid JSON - return unescaped version
-            echo "$test_value"
-            return
+        # Validate it's proper JSON if jq is available
+        if command -v jq &>/dev/null; then
+            if echo "$unescaped_value" | jq empty 2>/dev/null; then
+                # Valid JSON - return unescaped (arrays/objects are not quoted in HCL)
+                echo "$unescaped_value"
+                return
+            fi
         else
-            # Invalid JSON - treat as string
-            value="${value//\"/\\\"}"
-            echo "\"$value\""
-            return
+            # No jq available - if it looks like JSON, assume it's valid
+            # Check for basic JSON array structure: starts with [, ends with ], contains quotes
+            if [[ "$unescaped_value" =~ ^\[.*\".*\]$ ]]; then
+                echo "$unescaped_value"
+                return
+            fi
         fi
+        
+        # If validation failed, treat as string
+        value="${value//\"/\\\"}"
+        echo "\"$value\""
+        return
     fi
     
     # String (quoted and escaped)
