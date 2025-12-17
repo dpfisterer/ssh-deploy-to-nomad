@@ -203,11 +203,11 @@ runs:
         ENV_EXPORTS=$(echo "$ENV_VARS_JSON" | jq -r 'to_entries | map("export \(.key)=\(if (.value | type) == "array" or (.value | type) == "object" then (.value | tojson | @sh) else (.value | @sh) end)") | join(" && ")')
         
         # Execute deployment with service-specific filenames
-        # Use bash to ensure proper variable expansion and environment passing
+        # Use bash and source ~/.bashrc to load pre-configured environment (like NOMAD_ADDR)
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
           ${SSH_USER}@${SSH_HOST} bash << EOF
+        [ -f ~/.bashrc ] && source ~/.bashrc
         cd ${WORKSPACE_PATH}
-        export NOMAD_ADDR='${NOMAD_ADDR}'
         ${ENV_EXPORTS}
         bash deploy.sh ${SERVICE_NAME} ${ACTION} ${SAFE_NAME}.template.hcl ${SAFE_NAME}.variables.hcl
         EOF
@@ -234,7 +234,11 @@ runs:
         echo "🔍 Verifying deployment status..."
         
         STATUS_OUTPUT=$(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
-          ${SSH_USER}@${SSH_HOST} "export NOMAD_ADDR='${NOMAD_ADDR}' && nomad job status ${SERVICE_NAME}")
+          ${SSH_USER}@${SSH_HOST} bash << EOF
+        [ -f ~/.bashrc ] && source ~/.bashrc
+        nomad job status ${SERVICE_NAME}
+        EOF
+        )
         
         echo "$STATUS_OUTPUT"
         echo "job-status<<EOF" >> $GITHUB_OUTPUT
