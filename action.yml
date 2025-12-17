@@ -198,8 +198,9 @@ runs:
         fi
         
         # Convert JSON env vars to export statements
-        # Use @sh to properly escape values for shell
-        ENV_EXPORTS=$(echo "$ENV_VARS_JSON" | jq -r 'to_entries | map("export \(.key)=\(.value | @sh)") | join(" && ")')
+        # For arrays/objects: serialize to JSON string first, then apply @sh
+        # For primitives: apply @sh directly
+        ENV_EXPORTS=$(echo "$ENV_VARS_JSON" | jq -r 'to_entries | map("export \(.key)=\(if (.value | type) == "array" or (.value | type) == "object" then (.value | tojson | @sh) else (.value | @sh) end)") | join(" && ")')
         
         # Execute deployment with service-specific filenames
         ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
